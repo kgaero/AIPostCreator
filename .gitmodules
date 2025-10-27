@@ -16,9 +16,6 @@
 [submodule "refs/agentic-trading"]
 	path = refs/agentic-trading
 	url = https://github.com/kweinmeister/agentic-trading.git
-[submodule "refs/ep2-ai-agent-bake-off"]
-	path = refs/ep2-ai-agent-bake-off
-	url = https://github.com/goabego/ep2-ai-agent-bake-off.git
 [submodule "refs/agent-development-kit-crash-course"]
 	path = refs/agent-development-kit-crash-course
 	url = https://github.com/bhancockio/agent-development-kit-crash-course.git
