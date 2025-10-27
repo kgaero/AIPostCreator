@@ -1,5 +1,5 @@
 # 🧭 instruction_for_google-adk.md  
-**ALWAYS → Follow the instruction in the file below and create or update the docs/google-adk.md based on the code for AI agents in the src folder**
+**ALWAYS → Follow the instruction in the file below and create or update the docs/google-adk.md based on the code for AI agents in the agents folder**
 
 
 **Purpose:**  

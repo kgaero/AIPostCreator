@@ -15,11 +15,11 @@ ai_news_pipeline (SequentialAgent) ✅
 * **Type:** `SequentialAgent`
 * **Purpose:** Coordinate topic vetting, rapid research, and dispatch writing for AI-specific breaking news.
 * **Sub-agents:** `[topic_alignment_agent, news_researcher_agent, news_writer_agent]`
-* **Tools:** `[]`
-* **Callbacks:** `[]`
+* **Tools:** `None`
+* **Callbacks:** `None`
 * **Session State:**
-  - **reads:** `[topic, ai_topic_brief, ai_research_notes]`
-  - **writes:** `[ai_topic_brief, ai_research_notes, ai_news_post]`
+  - **reads:** `[]` (delegates context to sub-agents)
+  - **writes:** `[]` (state updates occur within sub-agents)
 * **Model:** `N/A (delegates to sub-agents)`
 * **Budget / Policy:** `{ max_iterations: inherited from sub-agents }`
 
@@ -31,9 +31,9 @@ ai_news_pipeline (SequentialAgent) ✅
 * **Type:** `LlmAgent`
 * **Purpose:** Ensure the user request is reframed into an AI-only angle and surface labs to investigate.
 * **Sub-agents:** `[]`
-* **Tools:** `[]`
-* **Callbacks:** `[]`
-* **Session State:** **reads:** `[topic]`, **writes:** `[ai_topic_brief]`
+* **Tools:** `None`
+* **Callbacks:** `None`
+* **Session State:** **reads:** `[]` (default context), **writes:** `[ai_topic_brief]`
 * **Model:** `gemini-2.5-flash`
 * **Special Notes:** Always names OpenAI unless the topic is provably unrelated; lists non-AI angles to avoid.
 
@@ -43,9 +43,9 @@ ai_news_pipeline (SequentialAgent) ✅
 * **Type:** `LlmAgent`
 * **Purpose:** Run focused web searches to gather sub-30-day AI developments and record structured findings.
 * **Sub-agents:** `[]`
-* **Tools:** `google_search`
-* **Callbacks:** `[]`
-* **Session State:** **reads:** `[ai_topic_brief]`, **writes:** `[ai_research_notes]`
+* **Tools:** `google_search (builtin) — issues live web queries limited to recent coverage`
+* **Callbacks:** `None`
+* **Session State:** **reads:** `[]` (default context), **writes:** `[ai_research_notes]`
 * **Model:** `gemini-2.5-flash`
 * **Special Notes:** Collects 3–5 sources, sorts by newest date, and flags missing coverage from major labs.
 
@@ -55,9 +55,9 @@ ai_news_pipeline (SequentialAgent) ✅
 * **Type:** `LlmAgent`
 * **Purpose:** Synthesize the research notes into a <=200-word AI news dispatch with inline citations.
 * **Sub-agents:** `[]`
-* **Tools:** `[]`
-* **Callbacks:** `[]`
-* **Session State:** **reads:** `[ai_research_notes]`, **writes:** `[ai_news_post]`
+* **Tools:** `None`
+* **Callbacks:** `None`
+* **Session State:** **reads:** `[]` (default context), **writes:** `[ai_news_post]`
 * **Model:** `gemini-2.5-pro`
 * **Special Notes:** Produces prose paragraphs plus an accurate word-count line and highlights future outlook.
 
@@ -73,7 +73,6 @@ ai_news_pipeline (SequentialAgent)
 ## 🧱 Session State (Canonical Keys)
 
 ```yaml
-topic: Raw topic string provided by the user.
 ai_topic_brief:
   focus_angle: AI-specific reframing of the topic.
   must_cover: Labs or products that must appear in coverage.
