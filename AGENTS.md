@@ -13,6 +13,7 @@ A concise, coding agent-facing guide for this repo. This is **not** the human RE
    1. [Repository Layout](#21-repository-layout)
    2. [Tech Stack](#22-tech-stack)
    3. [Python Setup](#23-python-setup)
+   4. [Shallow Clone Automation](#24-shallow-clone-automation)
 3. [ADK Multi-Agent Architecture Policy](#3-adk-multi-agent-architecture-policy)
    1. [Project Layout & Naming](#31-project-layout--naming)
    2. [Multi-Agent Structure](#32-multi-agent-structure)
@@ -54,6 +55,7 @@ These constraints are **non-negotiable** and govern every implementation choice.
 8. **Read current architecture docs.** If `docs/google-adk.md` exists, read and understand it before touching orchestration code, and do not modify it.
 9. **Review current source architecture.** Inspect everything under `agents/*` (if present) and avoid restructuring without explicit instructions.
 10. **Disallowed workarounds.** Do not create new agent base classes/utilities when an ADK equivalent exists, and do not copy utilities that ADK/tools already provide.
+11. **Hydrate submodules immediately after clone.** Every new workspace (including Jules’ or OpenAI Codex's default clone) must run `bash scripts/shallow_clone.sh --hydrate-existing .` before *any* other command so that all submodules are synced at depth 1.
 
 ### 1.2 Conflict Resolution Protocol
 
@@ -193,6 +195,31 @@ ruff check src        # or: pylint src
 mypy src              # if using type checks
 pytest tests/unittests -q
 ```
+
+### 2.4 Shallow Clone Automation
+
+Use `scripts/shallow_clone.sh` for every clone or refresh so that the main repo and all nested submodules stay shallow (depth 1).
+
+> **Mandatory first command after Jules’ default clone:**  
+> `bash scripts/shallow_clone.sh --hydrate-existing .`
+
+Run that hydration step before any installs, tests, or edits—Jules’ automatic `git clone` does **not** recurse submodules.
+
+1. **Fresh clone (any repo URL):**
+   ```bash
+   bash scripts/shallow_clone.sh <git-url>
+   ```
+   - The script infers the folder name from the URL when the second argument is omitted.
+   - Internally it runs `git clone --depth=1 --recurse-submodules --shallow-submodules` plus a follow-up `git submodule update --init --recursive --depth 1`, so every declared submodule—including nested ones—has only the latest commit.
+2. **Hydrate an existing checkout (cloud workspaces, local reruns, CI caches):**
+   ```bash
+   bash scripts/shallow_clone.sh --hydrate-existing .
+   ```
+   - Replace `.` with another path if the repo lives elsewhere.
+3. **Env toggles (depth is always fixed at 1):**
+   - `SHALLOW_CLONE_JOBS=<N>` — parallel clone/update jobs (default `4`).
+   - `SKIP_SUBMODULE_SYNC=1` — skip `git submodule sync` when mirrors are already configured.
+4. **Never call plain `git clone` in this repo’s automation.** **ALWAYS USE**: “`bash scripts/shallow_clone.sh <git-url>`”.
 
 ---
 
