@@ -1,101 +1,90 @@
-# Google ADK Agent Architecture — “Essay Writer (3-Step)”
+# Google ADK Agent Architecture — “AI News Desk Pipeline”
 
 ## 🧭 Agent Hierarchy Overview
 
 ```
-EssayWriterPipeline (SequentialAgent) ✅
-├─ OutlineGenerator (LlmAgent) ✅
-├─ WebResearcher (LlmAgent) ✅
-└─ EssayComposer (LlmAgent) ✅
+ai_news_pipeline (SequentialAgent) ✅
+├─ topic_alignment_agent (LlmAgent) ✅
+├─ news_researcher_agent (LlmAgent + google_search) ✅
+└─ news_writer_agent (LlmAgent) ✅
 ```
 
 ## 🧠 Root Agent
 
-* **Agent Name:** `EssayWriterPipeline`
+* **Agent Name:** `ai_news_pipeline`
 * **Type:** `SequentialAgent`
-* **Purpose:** Orchestrates a 3-step workflow to (1) draft an outline for topic **X**, (2) perform targeted web research, and (3) compose a citation-aware essay.
-* **Sub-agents:** `[OutlineGenerator, WebResearcher, EssayComposer]`
-* **Tools:** none
-* **Callbacks:** none
-* **Session State:** **reads:** `[topic]`, **writes:** `[outline, sources, draft_essay]`
-* **Model:** N/A (delegates to sub-agents)
+* **Purpose:** Coordinate topic vetting, rapid research, and dispatch writing for AI-specific breaking news.
+* **Sub-agents:** `[topic_alignment_agent, news_researcher_agent, news_writer_agent]`
+* **Tools:** `[]`
+* **Callbacks:** `[]`
+* **Session State:**
+  - **reads:** `[topic, ai_topic_brief, ai_research_notes]`
+  - **writes:** `[ai_topic_brief, ai_research_notes, ai_news_post]`
+* **Model:** `N/A (delegates to sub-agents)`
 * **Budget / Policy:** `{ max_iterations: inherited from sub-agents }`
 
 ## ⚙️ Sub-Agent Specifications
 
-### OutlineGenerator
+### topic_alignment_agent
 
-* **Agent Name:** `OutlineGenerator`
+* **Agent Name:** `topic_alignment_agent`
 * **Type:** `LlmAgent`
-* **Purpose:** Produce a clear, hierarchical outline (H1/H2/H3) and thesis statement for topic **X** with estimated word counts.
+* **Purpose:** Ensure the user request is reframed into an AI-only angle and surface labs to investigate.
 * **Sub-agents:** `[]`
 * **Tools:** `[]`
 * **Callbacks:** `[]`
-* **Session State:** **reads:** `[topic]`, **writes:** `[outline]`
-* **Model:** `gemini-2.0-flash`
-* **Special Notes:** Enforces outline quality rules (logical flow, coverage, non-redundancy). Adds an “evidence needed” bullet under each major section to guide research.
+* **Session State:** **reads:** `[topic]`, **writes:** `[ai_topic_brief]`
+* **Model:** `gemini-2.5-flash`
+* **Special Notes:** Always names OpenAI unless the topic is provably unrelated; lists non-AI angles to avoid.
 
-### WebResearcher
+### news_researcher_agent
 
-* **Agent Name:** `WebResearcher`
+* **Agent Name:** `news_researcher_agent`
 * **Type:** `LlmAgent`
-* **Purpose:** Execute focused web searches based on the outline’s “evidence needed,” extract key facts/quotes, and normalize citations.
+* **Purpose:** Run focused web searches to gather sub-30-day AI developments and record structured findings.
 * **Sub-agents:** `[]`
-* **Tools:**
+* **Tools:** `google_search`
+* **Callbacks:** `[]`
+* **Session State:** **reads:** `[ai_topic_brief]`, **writes:** `[ai_research_notes]`
+* **Model:** `gemini-2.5-flash`
+* **Special Notes:** Collects 3–5 sources, sorts by newest date, and flags missing coverage from major labs.
 
-  * `web_search (McpToolset via @modelcontextprotocol/server-web)` — targeted queries using outline headings
-  * `url_reader (McpToolset via @modelcontextprotocol/server-web)` — fetch & summarize pages into structured notes
-* **Callbacks:**
+### news_writer_agent
 
-  * `before_tool_callback`, `after_tool_callback` — trace search queries and captured notes
-* **Session State:** **reads:** `[outline]`, **writes:** `[sources]`
-* **Model:** `gemini-2.0-flash`
-* **Special Notes:** Produces structured research notes: `{ heading, claim, evidence, quote?, url, author?, date?, reliability_score }`. Deduplicates URLs and flags low-credibility sources.
-
-### EssayComposer
-
-* **Agent Name:** `EssayComposer`
+* **Agent Name:** `news_writer_agent`
 * **Type:** `LlmAgent`
-* **Purpose:** Write a fluent essay aligned to the outline, weaving in research notes with in-text citations and a references section.
+* **Purpose:** Synthesize the research notes into a <=200-word AI news dispatch with inline citations.
 * **Sub-agents:** `[]`
 * **Tools:** `[]`
-* **Callbacks:** `before_model_callback`, `after_model_callback` — capture final token counts and safety filters
-* **Session State:** **reads:** `[outline, sources]`, **writes:** `[draft_essay]`
-* **Model:** `gemini-2.0-flash`
-* **Special Notes:** Supports styles: academic, explanatory, persuasive. Enforces length bounds via prompt constraints and emits bibliography in chosen style (APA/MLA/Chicago) with available metadata.
+* **Callbacks:** `[]`
+* **Session State:** **reads:** `[ai_research_notes]`, **writes:** `[ai_news_post]`
+* **Model:** `gemini-2.5-pro`
+* **Special Notes:** Produces prose paragraphs plus an accurate word-count line and highlights future outlook.
 
 ## 🔗 Agent Connection Mapping
 
 ```
-EssayWriterPipeline (SequentialAgent)
-├─ OutlineGenerator (LlmAgent)
-├─ WebResearcher (LlmAgent) — tools: web_search, url_reader; callbacks: before/after tool
-└─ EssayComposer (LlmAgent) — callbacks: before/after model
+ai_news_pipeline (SequentialAgent)
+├─ topic_alignment_agent (LlmAgent)
+├─ news_researcher_agent (LlmAgent + google_search)
+└─ news_writer_agent (LlmAgent)
 ```
 
 ## 🧱 Session State (Canonical Keys)
 
 ```yaml
-topic: The essay subject provided by the user (string).
-outline: Hierarchical outline with thesis and “evidence needed” prompts (markdown/json).
-sources:
-  - heading: Outline section the source supports
-    claim: Specific claim being supported or challenged
-    evidence: Short summary of the evidence
-    quote: Optional exact quote
-    url: Source URL
-    author: Optional author/organization
-    date: Optional publication date
-    reliability_score: 0–1 confidence
-draft_essay: Final composed essay text (markdown) with in-text citations and references.
+topic: Raw topic string provided by the user.
+ai_topic_brief:
+  focus_angle: AI-specific reframing of the topic.
+  must_cover: Labs or products that must appear in coverage.
+  disallowed: Off-limits angles that drift away from AI.
+ai_research_notes: Markdown table capturing lab, headline, publish date, publisher, significance, and URL for vetted sources.
+ai_news_post: Final 200-word-max AI news dispatch with inline citations and explicit word count.
 ```
 
 ## 🔄 Update Protocol & Consistency Checks
 
-* Re-read the ADK documentation notes and this file before editing orchestration code.
-* Confirm agent names, types, tools, callbacks, and session keys match constants in implementation modules.
-* Validate that `WebResearcher` produces normalized `sources` entries used by `EssayComposer`.
-* If adding plagiarism checks or citation formatting tools, update the **Tools** and **Session State** for affected agents.
-* When changing essay style or citation style, version the prompt blocks and record in the repo CHANGELOG.
-
-*Format & sectioning mirror the project’s prior ADK agent spec template.* 
+* Re-read `agents/ai_news/agent.py` and sub-agent modules after any change to ensure the hierarchy mirrors this document.
+* Confirm `news_researcher_agent` retains the `google_search` tool and recency guardrails.
+* Verify every update keeps the word-count constraint and lab coverage requirements in prompts.
+* When adding new session keys or tools, document them in both the relevant agent section and the session state block.
