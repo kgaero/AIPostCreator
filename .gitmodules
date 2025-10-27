@@ -19,9 +19,6 @@
 [submodule "refs/ep2-ai-agent-bake-off"]
 	path = refs/ep2-ai-agent-bake-off
 	url = https://github.com/goabego/ep2-ai-agent-bake-off.git
-[submodule "refs/ai_agent_bake_off_ep_2"]
-	path = refs/ai_agent_bake_off_ep_2
-	url = https://github.com/bhancockio/ai_agent_bake_off_ep_2.git
 [submodule "refs/agent-development-kit-crash-course"]
 	path = refs/agent-development-kit-crash-course
 	url = https://github.com/bhancockio/agent-development-kit-crash-course.git
