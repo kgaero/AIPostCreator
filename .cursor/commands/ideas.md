@@ -1,1 +1,0 @@
-Follow the instruction in the file - [instructions_for_ideas.md](documentation/instructions_for_ideas.md) and create and/or update the documentations.
